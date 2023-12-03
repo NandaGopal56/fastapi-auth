@@ -1,4 +1,18 @@
-from utils import get_random_string
+from session.utils import get_random_string
+
+class CreateError(Exception):
+    """
+    Used internally as a consistent exception type to catch from save 
+    (see the docstring for SessionBase.save() for details).
+    """
+    pass
+
+class UpdateError(Exception):
+    """
+    Occurs if Django tries to update a session that was deleted.
+    """
+    pass
+
 
 class SessionBase:
     '''
