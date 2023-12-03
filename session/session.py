@@ -1,4 +1,5 @@
 from session.utils import get_random_string
+from datetime import datetime, timedelta, timezone
 
 class CreateError(Exception):
     """
@@ -132,6 +133,106 @@ class SessionBase:
         else:
             self.__session_key = None
 
+    session_key = property(_get_session_key)
+    _session_key = property(_get_session_key, _set_session_key)
+
+    def _get_session(self, no_load=False):
+        """
+        Lazily load session from storage (unless "no_load" is True, when only
+        an empty dict is stored) and store it in the current instance.
+        """
+        self.accessed = True
+        try:
+            return self._session_cache
+        except AttributeError:
+            if self.session_key is None or no_load:
+                self._session_cache = {}
+            else:
+                self._session_cache = self.load()
+        return self._session_cache
+
+    _session = property(_get_session)
+
+    def get_session_cookie_age(self):
+        return 500
+
+    def get_expiry_age(self, **kwargs):
+        """Get the number of seconds until the session expires.
+
+        Optionally, this function accepts `modification` and `expiry` keyword
+        arguments specifying the modification and expiry of the session.
+        """
+        try:
+            modification = kwargs["modification"]
+        except KeyError:
+            modification = timezone.now()
+        # Make the difference between "expiry=None passed in kwargs" and
+        # "expiry not passed in kwargs", in order to guarantee not to trigger
+        # self.load() when expiry is provided.
+        try:
+            expiry = kwargs["expiry"]
+        except KeyError:
+            expiry = self.get("_session_expiry")
+
+        if not expiry:  # Checks both None and 0 cases
+            return self.get_session_cookie_age()
+        if not isinstance(expiry, (datetime, str)):
+            return expiry
+        if isinstance(expiry, str):
+            expiry = datetime.fromisoformat(expiry)
+        delta = expiry - modification
+        return delta.days * 86400 + delta.seconds
+
+    def get_expiry_date(self, **kwargs):
+        """Get session the expiry date (as a datetime object).
+
+        Optionally, this function accepts `modification` and `expiry` keyword
+        arguments specifying the modification and expiry of the session.
+        """
+        try:
+            modification = kwargs["modification"]
+        except KeyError:
+            modification = timezone.now()
+        # Same comment as in get_expiry_age
+        try:
+            expiry = kwargs["expiry"]
+        except KeyError:
+            expiry = self.get("_session_expiry")
+
+        if isinstance(expiry, datetime):
+            return expiry
+        elif isinstance(expiry, str):
+            return datetime.fromisoformat(expiry)
+        expiry = expiry or self.get_session_cookie_age()
+        return modification + timedelta(seconds=expiry)
+
+    def set_expiry(self, value):
+        """
+        Set a custom expiration for the session. ``value`` can be an integer,
+        a Python ``datetime`` or ``timedelta`` object or ``None``.
+
+        If ``value`` is an integer, the session will expire after that many
+        seconds of inactivity. If set to ``0`` then the session will expire on
+        browser close.
+
+        If ``value`` is a ``datetime`` or ``timedelta`` object, the session
+        will expire at that specific future time.
+
+        If ``value`` is ``None``, the session uses the global session expiry
+        policy.
+        """
+        if value is None:
+            # Remove any custom expiration for this session.
+            try:
+                del self["_session_expiry"]
+            except KeyError:
+                pass
+            return
+        if isinstance(value, timedelta):
+            value = timezone.now() + value
+        if isinstance(value, datetime):
+            value = value.isoformat()
+        self["_session_expiry"] = value
 
     # Methods that the child class needs to implement
 
