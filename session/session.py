@@ -1,6 +1,7 @@
 from session.utils import get_random_string
 from datetime import datetime, timedelta, timezone
 import json
+from session.constants import Config
 
 class CreateError(Exception):
     """
@@ -155,7 +156,7 @@ class SessionBase:
     _session = property(_get_session)
 
     def get_session_cookie_age(self):
-        return 500
+        return Config.SESSION_COOKIE_AGE
 
     def get_expiry_age(self, **kwargs):
         """Get the number of seconds until the session expires.

@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from typing import Callable
 from session.db_adapter import SessionStore
+from session.constants import Config
 
 app = FastAPI()
 
@@ -12,12 +13,12 @@ def home(request: Request):
     request.state.session.save()
     return str(request.__dict__)
 
-SESSION_KEY_NAME = 'sessionID'
-SESSION_SAVE_EVERY_REQUEST = True
+Config.SESSION_KEY_NAME = 'sessionID'
+Config.SESSION_SAVE_EVERY_REQUEST = True
 
 # Middleware for adding custom header to requests
 async def request_middleware_handler(request: Request, call_next: Callable) -> Response:
-    session_key = request.cookies.get(SESSION_KEY_NAME)
+    session_key = request.cookies.get(Config.SESSION_KEY_NAME)
     request.state.session = SessionStore(session_key)
     print(request.state.session.__dict__)
     # Proceed with the request handling
@@ -42,13 +43,13 @@ async def response_middleware_handler(request: Request, call_next: Callable) -> 
         raise AttributeError
         # we should return response here. for develomnet i am raiseing exception here
     
-    if SESSION_KEY_NAME in request.cookies and empty:
-        response.delete_cookie(SESSION_KEY_NAME)
+    if Config.SESSION_KEY_NAME in request.cookies and empty:
+        response.delete_cookie(Config.SESSION_KEY_NAME)
 
     else:
         if accessed:
             pass
-        if (modified or SESSION_SAVE_EVERY_REQUEST) and not empty:
+        if (modified or Config.SESSION_SAVE_EVERY_REQUEST) and not empty:
             pass
 
     return response
