@@ -1,4 +1,4 @@
-
+import json
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
@@ -8,12 +8,12 @@ from session.db_adapter import SessionStore
 app = FastAPI()
 
 @app.get("/")
-def home():
-    return {
-        'foo': 'bar'
-    }
+def home(request: Request):
+    request.state.session.save()
+    return str(request.__dict__)
 
 SESSION_KEY_NAME = 'sessionID'
+SESSION_SAVE_EVERY_REQUEST = True
 
 # Middleware for adding custom header to requests
 async def request_middleware_handler(request: Request, call_next: Callable) -> Response:
@@ -28,6 +28,29 @@ async def request_middleware_handler(request: Request, call_next: Callable) -> R
 async def response_middleware_handler(request: Request, call_next: Callable) -> Response:
     # Execute the request and get the response
     response = await call_next(request)
+    
+    if hasattr(request.state, 'session'):
+        response.session = request.state.session
+  
+    try:
+        accessed = response.session.accessed
+        modified = response.session.modified
+        empty = response.session.is_empty()
+        
+        print(response.session.__dict__)
+    except AttributeError:
+        raise AttributeError
+        # we should return response here. for develomnet i am raiseing exception here
+    
+    if SESSION_KEY_NAME in request.cookies and empty:
+        response.delete_cookie(SESSION_KEY_NAME)
+
+    else:
+        if accessed:
+            pass
+        if (modified or SESSION_SAVE_EVERY_REQUEST) and not empty:
+            pass
+
     return response
 
 # Apply middleware for requests

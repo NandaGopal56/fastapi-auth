@@ -1,5 +1,6 @@
 from session.utils import get_random_string
 from datetime import datetime, timedelta, timezone
+import json
 
 class CreateError(Exception):
     """
@@ -61,7 +62,7 @@ class SessionBase:
         
     def encode(self, session_dict):
         # TODO: implement actual encoding with salt, serializer etc.
-        return session_dict
+        return json.dumps(session_dict)
     
     def decode(self, session_data):
         # TODO: return actual decoded session data after accepting the encrypted signing data
@@ -165,7 +166,7 @@ class SessionBase:
         try:
             modification = kwargs["modification"]
         except KeyError:
-            modification = timezone.now()
+            modification = datetime.now()
         # Make the difference between "expiry=None passed in kwargs" and
         # "expiry not passed in kwargs", in order to guarantee not to trigger
         # self.load() when expiry is provided.
@@ -192,7 +193,7 @@ class SessionBase:
         try:
             modification = kwargs["modification"]
         except KeyError:
-            modification = timezone.now()
+            modification = datetime.now()
         # Same comment as in get_expiry_age
         try:
             expiry = kwargs["expiry"]
@@ -229,7 +230,7 @@ class SessionBase:
                 pass
             return
         if isinstance(value, timedelta):
-            value = timezone.now() + value
+            value = datetime.now() + value
         if isinstance(value, datetime):
             value = value.isoformat()
         self["_session_expiry"] = value

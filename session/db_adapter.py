@@ -21,7 +21,7 @@ class FastAPI_Session(Base):
 
     session_key = Column(String(40), primary_key=True, index=True, nullable=False)
     session_data = Column(Text)
-    exire_date = Column(DateTime(timezone=True), index=True, nullable=False)
+    expire_date = Column(DateTime(timezone=True), index=True, nullable=False)
 
 
 
@@ -46,10 +46,10 @@ class SessionStore(SessionBase):
         s = self._get_session_from_db()
         return self.decode(s.session_data) if s else {}
     
-    def exists(self):
+    def exists(self, session_key):
         return bool(
             session.query(FastAPI_Session).filter(
-                FastAPI_Session.session_key == self.session_key
+                FastAPI_Session.session_key == session_key
             ).first()
             )
     
